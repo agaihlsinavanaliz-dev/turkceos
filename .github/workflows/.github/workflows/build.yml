@@ -1,0 +1,32 @@
+name: TurkceOS Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kurulum
+        run: sudo apt update && sudo apt install -y build-essential git
+
+      - name: Buildroot + sistem
+        run: |
+          git clone https://github.com/buildroot/buildroot.git
+          cd buildroot
+
+          mkdir -p board/turkceos/rootfs-overlay/root
+
+          echo "print('TurkceOS basladi')" > board/turkceos/rootfs-overlay/root/test.py
+
+          printf 'BR2_x86_64=y\nBR2_TOOLCHAIN_BUILDROOT_GLIBC=y\nBR2_TARGET_GENERIC_HOSTNAME=\"turkceos\"\nBR2_TARGET_GENERIC_ISSUE=\"TurkceOS\"\nBR2_TARGET_ROOTFS_ISO9660=y\nBR2_ROOTFS_OVERLAY=\"board/turkceos/rootfs-overlay\"\n' > configs/turkceos_defconfig
+
+          make turkceos_defconfig
+          make
+
+      - name: ISO yukle
+        uses: actions/upload-artifact@v3
+        with:
+          name: turkceos
+          path: buildroot/output/images/
