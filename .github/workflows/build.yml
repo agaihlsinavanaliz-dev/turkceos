@@ -1,4 +1,63 @@
-cat > configs/turkceos_defconfig <<EOF
+name: TurkceOS Full Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Sistem hazırlık
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential git
+
+      - name: Buildroot indir
+        run: |
+          git clone https://github.com/buildroot/buildroot.git
+          cd buildroot
+
+          mkdir -p board/turkceos/rootfs-overlay/root
+
+          # DESKTOP
+          cat > board/turkceos/rootfs-overlay/root/desktop.py <<EOF
+import tkinter as tk
+root = tk.Tk()
+root.title("TürkçeOS")
+root.attributes("-fullscreen", True)
+
+def ac():
+    w = tk.Toplevel(root)
+    w.title("Not")
+    tk.Text(w).pack()
+
+tk.Button(root, text="Not Aç", command=ac).pack()
+root.mainloop()
+EOF
+
+          # INSTALLER
+          cat > board/turkceos/rootfs-overlay/root/installer.py <<EOF
+import tkinter as tk
+import os
+
+def baslat():
+    os.system("python3 /root/desktop.py")
+
+root = tk.Tk()
+root.title("TürkçeOS")
+
+tk.Button(root, text="Başlat", command=baslat).pack()
+root.mainloop()
+EOF
+
+          # AUTOSTART
+          cat > board/turkceos/rootfs-overlay/root/.xinitrc <<EOF
+python3 /root/installer.py
+EOF
+
+          # CONFIG
+          cat > configs/turkceos_defconfig <<EOF
 BR2_x86_64=y
 BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 BR2_TARGET_GENERIC_HOSTNAME="turkceos"
