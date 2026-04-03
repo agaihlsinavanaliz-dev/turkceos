@@ -1,0 +1,36 @@
+name: TurkceOS Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Paketleri kur
+        run: sudo apt update && sudo apt install -y build-essential git
+
+      - name: Sistem oluştur
+        run: |
+          git clone https://github.com/buildroot/buildroot.git
+          cd buildroot
+
+          mkdir -p board/turkceos/rootfs-overlay/root
+
+          printf 'import tkinter as tk\nroot = tk.Tk()\nroot.title("TürkçeOS")\nroot.attributes("-fullscreen", True)\n\ndef ac():\n    w = tk.Toplevel(root)\n    w.title("Not")\n    tk.Text(w).pack()\n\ntk.Button(root, text="Not Aç", command=ac).pack()\nroot.mainloop()' > board/turkceos/rootfs-overlay/root/desktop.py
+
+          printf 'import tkinter as tk\nimport os\n\ndef baslat():\n    os.system("python3 /root/desktop.py")\n\nroot = tk.Tk()\nroot.title("TürkçeOS")\n\ntk.Button(root, text="Başlat", command=baslat).pack()\nroot.mainloop()' > board/turkceos/rootfs-overlay/root/installer.py
+
+          printf 'python3 /root/installer.py' > board/turkceos/rootfs-overlay/root/.xinitrc
+
+          printf 'BR2_x86_64=y\nBR2_TOOLCHAIN_BUILDROOT_GLIBC=y\nBR2_TARGET_GENERIC_HOSTNAME="turkceos"\nBR2_TARGET_GENERIC_ISSUE="TurkceOS"\nBR2_PACKAGE_PYTHON3=y\nBR2_PACKAGE_PYTHON3_TKINTER=y\nBR2_PACKAGE_XORG7=y\nBR2_PACKAGE_XINIT=y\nBR2_TARGET_ROOTFS_ISO9660=y\nBR2_ROOTFS_OVERLAY="board/turkceos/rootfs-overlay"\n' > configs/turkceos_defconfig
+
+          make turkceos_defconfig
+          make
+
+      - name: ISO yükle
+        uses: actions/upload-artifact@v3
+        with:
+          name: turkceos
+          path: buildroot/output/images/
